@@ -1,0 +1,34 @@
+.git
+.env
+.env.*
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.db
+.claude/
+.playwright-mcp/
+.superpowers/
+.pytest_cache/
+tests/
+docs/
+!docs/
+!docs/s3-access-reader/
+!docs/s3-access-reader/s3-access-reader/
+!docs/s3-access-reader/s3-access-reader/**
+scripts/
+# Exception: sandbox-lark-cli wrapper must end up in the image (mounted over
+# /usr/bin/lark-cli inside the bwrap sandbox to forbid `--as bot`).
+!scripts/sandbox-lark-cli
+# Exception: audit_query.py is the ops CLI for the audit_log table — needs to
+# be reachable via `kubectl exec <pod> -- python /app/scripts/audit_query.py …`.
+!scripts/audit_query.py
+diagrams/
+lark-bot-home/
+lark-bot-users/
+users/
+bot.pid
+.bot.pid
+bot.sh
+start.bat

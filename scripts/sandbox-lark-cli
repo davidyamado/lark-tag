@@ -1,0 +1,61 @@
+#!/bin/bash
+# scripts/sandbox-lark-cli
+#
+# Shadow wrapper for /usr/bin/lark-cli, mounted over the real binary inside the
+# bubblewrap sandbox. Purpose: prevent a malicious user-authored script (executed
+# by Claude in the sandbox) from running `lark-cli --as bot`, which would
+# escalate from user-scope to bot-scope and let the user read messages/contacts
+# that the bot has app-level access to but the user does not.
+#
+# Behaviour:
+#   * Rejects `--as bot` outright with exit 13 (and a clear error to stderr).
+#   * If no `--as` flag is present, appends `--as user` automatically so
+#     legitimate Claude commands keep working without each turn having to
+#     remember the flag.
+#   * Otherwise passes args through to the real binary unchanged.
+#
+# The bot's *main* Python process runs OUTSIDE the sandbox; its PATH still
+# points at the real lark-cli, so its legitimate `--as bot` calls (event
+# subscriber, lark_runner.py, etc.) are unaffected.
+#
+# Path layout (set up by Dockerfile):
+#   /opt/bot-guard/sandbox-lark-cli       this wrapper
+#   /opt/bot-guard/real-lark-cli          symlink → resolved real binary
+#   bwrap --ro-bind /opt/bot-guard/sandbox-lark-cli /usr/bin/lark-cli
+#                  shadows the real binary inside the sandbox
+set -e
+
+REAL=/opt/bot-guard/real-lark-cli
+
+# Reject --as bot. Walk through all args (not just the next-after-"--as") so
+# that --as=bot or --as bot anywhere on the line is caught.
+prev=""
+for arg in "$@"; do
+    case "$arg" in
+        --as=bot)
+            echo "lark-cli: --as bot is forbidden inside the bot sandbox" >&2
+            exit 13
+            ;;
+        bot)
+            if [ "$prev" = "--as" ]; then
+                echo "lark-cli: --as bot is forbidden inside the bot sandbox" >&2
+                exit 13
+            fi
+            ;;
+    esac
+    prev="$arg"
+done
+
+# If the caller didn't pass any --as flag at all, force --as user.
+has_as=0
+for arg in "$@"; do
+    case "$arg" in
+        --as|--as=*) has_as=1; break ;;
+    esac
+done
+
+if [ "$has_as" -eq 0 ]; then
+    exec "$REAL" "$@" --as user
+else
+    exec "$REAL" "$@"
+fi

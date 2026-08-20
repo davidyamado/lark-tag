@@ -1,0 +1,4 @@
+interface:
+  display_name: "S3 Access Reader"
+  short_description: "Call access-checked S3 list and read endpoints."
+  default_prompt: "Use $s3-access-reader to list or read S3 content through the access-checked yo-agent API."
